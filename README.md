@@ -3,4 +3,6 @@ Increasing presence of Bigg’s killer whales and changing seasonal distribution
 
 Zoe R. Rand, Laura E. Koehn, Alexis Morrigan, Brad Hanson
 
+_Ecological Applications_. Submitted.
+
 
