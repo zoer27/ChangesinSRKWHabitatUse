@@ -51,6 +51,12 @@ T_dat<- KW_pa_dat %>% filter(Pod == "T")
 m1_SRKW<-readRDS("results/Model1_SRKW_fit.RDS")
 m1_T<-readRDS("results/Model1_T_fit.RDS")
 K<-9
+
+#pod specific
+m1_J<-readRDS("results/Model1_J_fit.RDS")
+m1_K<-readRDS("results/Model1_K_fit.RDS")
+m1_L<-readRDS("results/Model1_L_fit.RDS")
+
 #without hydrophone data
 m3_SRKW<-readRDS("results/Model3_SRKW_fit_noH.RDS")
 m3_T<-readRDS("results/Model3_T_fit_noH.RDS")
@@ -102,17 +108,108 @@ ggplot(T_dat, aes(Year, resids)) +
   geom_point() +
   geom_smooth()
 
+## J Pod ----
+
+summary(m1_J)
+sanity(m1_J)
+
+resids<-residuals(m1_J, type = "mle-mvn")
+qqnorm(resids)
+qqline(resids)
+
+#plotting spatial residuals
+
+J_dat$resids<-resids
+ggplot(J_dat, aes(X, Y, col = resids)) +
+  scale_colour_gradient2() +
+  geom_point() +
+  facet_wrap(~Year, ncol = 14) +
+  coord_fixed()
+
+#residuals over time
+ggplot(J_dat, aes(Year, resids)) +
+  geom_point() +
+  geom_smooth()
+
+## K pod ----
+summary(m1_K)
+sanity(m1_K)
+
+resids<-residuals(m1_K, type = "mle-mvn")
+qqnorm(resids)
+qqline(resids)
+
+#plotting spatial residuals
+
+K_dat$resids<-resids
+ggplot(K_dat, aes(X, Y, col = resids)) +
+  scale_colour_gradient2() +
+  geom_point() +
+  facet_wrap(~Year, ncol = 14) +
+  coord_fixed()
+
+#residuals over time
+ggplot(K_dat, aes(Year, resids)) +
+  geom_point() +
+  geom_smooth()
+
+## L Pod ----
+summary(m1_L)
+sanity(m1_L)
+
+resids<-residuals(m1_L, type = "mle-mvn")
+qqnorm(resids)
+qqline(resids)
+
+#plotting spatial residuals
+
+L_dat$resids<-resids
+ggplot(L_dat, aes(X, Y, col = resids)) +
+  scale_colour_gradient2() +
+  geom_point() +
+  facet_wrap(~Year, ncol = 14) +
+  coord_fixed()
+
+#residuals over time
+ggplot(L_dat, aes(Year, resids)) +
+  geom_point() +
+  geom_smooth()
 
 # Model Result Tables -----------------------------------------------------
+#SRKW
 m1_results_SRKW_fixed<-tidy(m1_SRKW)
 m1_results_SRKW_random<-tidy(m1_SRKW, effects = "ran_pars")
 m1_results_SRKW<-bind_rows(m1_results_SRKW_fixed, m1_results_SRKW_random)
 write_csv(m1_results_SRKW, "results/model_result_table_SRKW.csv")
 
+#Transients
 m1_results_T_fixed<-tidy(m1_T)
 m1_results_T_random<-tidy(m1_T, effects = "ran_pars")
 m1_results_T<-bind_rows(m1_results_T_fixed, m1_results_T_random)
 write_csv(m1_results_T, "results/model_result_table_T.csv")
+
+#J pod
+m1_results_J_fixed<-tidy(m1_J)
+m1_results_J_random<-tidy(m1_J, effects = "ran_pars")
+m1_results_J<-bind_rows(m1_results_J_fixed, m1_results_J_random)
+m1_results_J<-m1_results_J %>% add_column(Pod = "J", .before = "term")
+
+#K pod
+m1_results_K_fixed<-tidy(m1_K)
+m1_results_K_random<-tidy(m1_K, effects = "ran_pars")
+m1_results_K<-bind_rows(m1_results_K_fixed, m1_results_K_random)
+m1_results_K<-m1_results_K %>% add_column(Pod = "K", .before = "term")
+
+#L Pod
+m1_results_L_fixed<-tidy(m1_L)
+m1_results_L_random<-tidy(m1_L, effects = "ran_pars")
+m1_results_L<-bind_rows(m1_results_L_fixed, m1_results_L_random)
+m1_results_L<-m1_results_L %>% add_column(Pod = "L", .before = "term")
+
+#together
+m1_results_pod<-bind_rows(m1_results_J, m1_results_K, m1_results_L)
+write_csv(m1_results_pod, "results/pod_results_table.csv")
+
 # Predictions by quad with uncertainty ------------------------------------
 
 ## SRKW ----
@@ -160,6 +257,77 @@ preds_quads<-bind_cols(predict_quad, sims_T_quads) %>% select(-c(FishArea, UTMx,
 head(preds_quads)
 #save simulations
 saveRDS(preds_quads, "results/T_quads_preds.RDS")
+
+## J Pod ----
+#predictions for each quadrant
+quads_dat<-quads %>% st_as_sf(coords=c('Long','Lat'),crs=4326,remove = F) %>%  
+  st_transform(crs = "+proj=utm +zone=10 +datum=WGS84 +units=km") %>%
+  mutate(X=st_coordinates(.)[,1],Y=st_coordinates(.)[,2]) %>%   
+  as.data.frame()
+
+predict_quad<-expand_grid(
+  Quad = quads_dat$Quad, 
+  Year = unique(J_dat$Year), 
+  Month = seq(1,12, by = 1))
+predict_quad$fyear<-as.factor(predict_quad$Year)
+predict_quad<-predict_quad %>% left_join(quads_dat, by = "Quad") %>% as.data.frame()
+sims_J_quads<-predict(m1_J, newdata = predict_quad, nsim = 1000)
+
+head(sims_J_quads)
+colnames(sims_J_quads)<-paste0("P", seq(1, 1000, by =1))
+
+preds_quads<-bind_cols(predict_quad, sims_J_quads) %>% select(-c(FishArea, UTMx, UTMy, geometry))
+head(preds_quads)
+
+#save 
+saveRDS(preds_quads, "results/J_quads_preds.RDS")
+
+## K pod ----
+quads_dat<-quads %>% st_as_sf(coords=c('Long','Lat'),crs=4326,remove = F) %>%  
+  st_transform(crs = "+proj=utm +zone=10 +datum=WGS84 +units=km") %>%
+  mutate(X=st_coordinates(.)[,1],Y=st_coordinates(.)[,2]) %>%   
+  as.data.frame()
+
+predict_quad<-expand_grid(
+  Quad = quads_dat$Quad, 
+  Year = unique(K_dat$Year), 
+  Month = seq(1,12, by = 1))
+predict_quad$fyear<-as.factor(predict_quad$Year)
+predict_quad<-predict_quad %>% left_join(quads_dat, by = "Quad") %>% as.data.frame()
+sims_K_quads<-predict(m1_K, newdata = predict_quad, nsim = 1000)
+
+head(sims_K_quads)
+colnames(sims_K_quads)<-paste0("P", seq(1, 1000, by =1))
+
+preds_quads<-bind_cols(predict_quad, sims_K_quads) %>% select(-c(FishArea, UTMx, UTMy, geometry))
+head(preds_quads)
+
+#save 
+saveRDS(preds_quads, "results/K_quads_preds.RDS")
+
+## L Pod ----
+quads_dat<-quads %>% st_as_sf(coords=c('Long','Lat'),crs=4326,remove = F) %>%  
+  st_transform(crs = "+proj=utm +zone=10 +datum=WGS84 +units=km") %>%
+  mutate(X=st_coordinates(.)[,1],Y=st_coordinates(.)[,2]) %>%   
+  as.data.frame()
+
+predict_quad<-expand_grid(
+  Quad = quads_dat$Quad, 
+  Year = unique(L_dat$Year), 
+  Month = seq(1,12, by = 1))
+predict_quad$fyear<-as.factor(predict_quad$Year)
+predict_quad<-predict_quad %>% left_join(quads_dat, by = "Quad") %>% as.data.frame()
+sims_L_quads<-predict(m1_L, newdata = predict_quad, nsim = 1000)
+
+head(sims_L_quads)
+colnames(sims_L_quads)<-paste0("P", seq(1, 1000, by =1))
+
+preds_quads<-bind_cols(predict_quad, sims_L_quads) %>% select(-c(FishArea, UTMx, UTMy, geometry))
+head(preds_quads)
+
+#save 
+saveRDS(preds_quads, "results/L_quads_preds.RDS")
+
 
 # Predictions continuous spatial grid---------------------
 ## SRKW ----

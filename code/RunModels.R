@@ -47,6 +47,7 @@ KW_pa_dat <- KW_pa_dat %>%
 SRKW_dat<-KW_pa_dat %>% filter(Pod == "SRKW")
 T_dat<- KW_pa_dat %>% filter(Pod == "T")
 
+
 # SRKW model --------------------------------------------------------------
 
 #make mesh
@@ -140,9 +141,129 @@ saveRDS(m1_T, "results/Model1_T_fit.RDS")
 #Absences are from other SRKW sightings of other pods
 #If mixed pod included in all models
 
+#read in pod_specific data
+SRKW_dat<-read_csv("data/SRKW_pod.csv")
+
+#converting to spatial data
+SRKW_dat<-SRKW_dat%>% 
+  st_as_sf(coords=c('X','Y'),crs="+proj=utm +zone=10 +units=km",remove = F) %>%  
+  as.data.frame()
 ## J Pod ----
+J_dat<-SRKW_dat %>% dplyr::select(-c("Jn", "Kn", "Ln", "L", "K"))
+#make mesh
+mesh_J<-make_mesh(J_dat, c("X", "Y"), cutoff = 8)
+mesh_J$mesh$n #number of veritces
+plot(mesh_J)
+
+#adding in Puget sound barrier
+barrier_mesh_J<-add_barrier_mesh(
+  spde_obj = mesh_J,
+  barrier_sf = ps,
+  range_fraction = 0.1,
+  plot = FALSE
+)
+barrier_mesh_J$mesh$n #number of vertices
+
+#plotting barrier mesh
+mesh_df_water <- barrier_mesh_J$mesh_sf[barrier_mesh_J$normal_triangles, ]
+mesh_df_land <- barrier_mesh_J$mesh_sf[barrier_mesh_J$barrier_triangles, ]
+ggplot(ps) +
+  geom_sf() +
+  geom_sf(data = mesh_df_water, size = 2, colour = "blue") +
+  geom_sf(data = mesh_df_land, size = 2, colour = "darkgreen")
+
+J_dat$fyear<-as.factor(J_dat$Year)
+
+K<-9 #smooth parameter, making slightly less than 12 because helps with model fit
+m1_J<-sdmTMB(data = J_dat, 
+             mesh = barrier_mesh_J, 
+             family = binomial(link = "logit"), 
+             formula = J ~ -1 + fyear + s(Month, bs = "cc", k = K) + #global smooth
+               s(Month, fyear, bs = "fs", k = K), #annual smooth
+             spatial = "on", 
+             time = "Year", 
+             spatiotemporal = "IID") #spatial fields are not autocorrelated through time
 
 
+saveRDS(m1_J, "results/Model1_J_fit.RDS")
+
+## K Pod ----
+K_dat<-SRKW_dat %>% dplyr::select(-c("Jn", "Kn", "Ln", "L", "J"))
+#make mesh
+mesh_K<-make_mesh(K_dat, c("X", "Y"), cutoff = 8)
+mesh_K$mesh$n #number of veritces
+plot(mesh_K)
+
+#adding in Puget sound barrier
+barrier_mesh_K<-add_barrier_mesh(
+  spde_obj = mesh_K,
+  barrier_sf = ps,
+  range_fraction = 0.1,
+  plot = FALSE
+)
+barrier_mesh_K$mesh$n #number of vertices
+
+#plotting barrier mesh
+mesh_df_water <- barrier_mesh_K$mesh_sf[barrier_mesh_K$normal_triangles, ]
+mesh_df_land <- barrier_mesh_K$mesh_sf[barrier_mesh_K$barrier_triangles, ]
+ggplot(ps) +
+  geom_sf() +
+  geom_sf(data = mesh_df_water, size = 2, colour = "blue") +
+  geom_sf(data = mesh_df_land, size = 2, colour = "darkgreen")
+
+K_dat$fyear<-as.factor(K_dat$Year)
+
+K<-9 #smooth parameter, making slightly less than 12 because helps with model fit
+m1_K<-sdmTMB(data = K_dat, 
+             mesh = barrier_mesh_K, 
+             family = binomial(link = "logit"), 
+             formula = K ~ -1 + fyear + s(Month, bs = "cc", k = K) + #global smooth
+               s(Month, fyear, bs = "fs", k = K), #annual smooth
+             spatial = "on", 
+             time = "Year", 
+             spatiotemporal = "IID") #spatial fields are not autocorrelated through time
+
+
+saveRDS(m1_K, "results/Model1_K_fit.RDS")
+
+## L Pod ----
+L_dat<-SRKW_dat %>% dplyr::select(-c("Jn", "Kn", "Ln", "K", "J"))
+#make mesh
+mesh_L<-make_mesh(L_dat, c("X", "Y"), cutoff = 8)
+mesh_L$mesh$n #number of veritces
+plot(mesh_L)
+
+#adding in Puget sound barrier
+barrier_mesh_L<-add_barrier_mesh(
+  spde_obj = mesh_L,
+  barrier_sf = ps,
+  range_fraction = 0.1,
+  plot = FALSE
+)
+barrier_mesh_L$mesh$n #number of vertices
+
+#plotting barrier mesh
+mesh_df_water <- barrier_mesh_L$mesh_sf[barrier_mesh_L$normal_triangles, ]
+mesh_df_land <- barrier_mesh_L$mesh_sf[barrier_mesh_L$barrier_triangles, ]
+ggplot(ps) +
+  geom_sf() +
+  geom_sf(data = mesh_df_water, size = 2, colour = "blue") +
+  geom_sf(data = mesh_df_land, size = 2, colour = "darkgreen")
+
+L_dat$fyear<-as.factor(L_dat$Year)
+
+K<-9 #smooth parameter, making slightly less than 12 because helps with model fit
+m1_L<-sdmTMB(data = L_dat, 
+             mesh = barrier_mesh_L, 
+             family = binomial(link = "logit"), 
+             formula = L ~ -1 + fyear + s(Month, bs = "cc", k = K) + #global smooth
+               s(Month, fyear, bs = "fs", k = K), #annual smooth
+             spatial = "on", 
+             time = "Year", 
+             spatiotemporal = "IID") #spatial fields are not autocorrelated through time
+
+
+saveRDS(m1_L, "results/Model1_L_fit.RDS")
 # Models without Hydrophone data ------------------------------------------
 KW_dat_noH<-read_csv("data/KW_Presence_Absence_TG_nohydrophone.csv")
 KW_pa_dat_noH<-KW_dat_noH %>% filter(Year >= 1978) %>% filter(Year <= 2022)
