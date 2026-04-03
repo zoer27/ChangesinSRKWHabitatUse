@@ -593,6 +593,107 @@ no_h_together
 
 ggsave("Manuscript/figures/noH_annual_comparison.png", dpi = 600, width = 5, height = 3, units = "in")
 
+#Monthly
+#puget sound
+SRKW_PS_presence_noH<-SRKW_preds_noH %>% pivot_longer(-c(Quad, Year, Month, fyear, Lat, Long, X, Y), names_to = "Sim", values_to = "est") %>% 
+  mutate(est_real = plogis(est)) %>% filter(Quad >= 366) %>% group_by(Year, Month, Sim) %>% 
+  summarise(avg_est = sum(est_real)/80) %>% ungroup() %>% group_by(Year, Month) %>% 
+  summarise(med = mean(avg_est), lwr = quantile(avg_est, prob = 0.025), 
+            upr = quantile(avg_est, prob = 0.975))
+
+#central salish sea
+SRKW_SS_presence_noH<-SRKW_preds_noH %>% pivot_longer(-c(Quad, Year, Month, fyear, Lat, Long, X, Y), names_to = "Sim", values_to = "est") %>% 
+  mutate(est_real = plogis(est)) %>% filter(Quad < 366) %>% group_by(Year, Month, Sim) %>% 
+  summarise(avg_est = sum(est_real)/367) %>% ungroup() %>% group_by(Year, Month) %>% 
+  summarise(med = quantile(avg_est, prob = 0.5), lwr = quantile(avg_est, prob = 0.025), 
+            upr = quantile(avg_est, prob = 0.975))
+
+T_PS_presence_noH<-T_preds_noH %>% pivot_longer(-c(Quad, Year, Month, fyear, Lat, Long, X, Y), names_to = "Sim", values_to = "est") %>% 
+  mutate(est_real = plogis(est)) %>% filter(Quad >= 366) %>% group_by(Year, Month, Sim) %>% 
+  summarise(avg_est = sum(est_real)/80) %>% ungroup() %>% group_by(Year, Month) %>% 
+  summarise(med = quantile(avg_est, prob = 0.5), lwr = quantile(avg_est, prob = 0.025), 
+            upr = quantile(avg_est, prob = 0.975))
+
+T_SS_presence_noH<-T_preds_noH %>% pivot_longer(-c(Quad, Year, Month, fyear, Lat, Long, X, Y), names_to = "Sim", values_to = "est") %>% 
+  mutate(est_real = plogis(est)) %>% filter(Quad < 366) %>% group_by(Year, Month, Sim) %>% 
+  summarise(avg_est = sum(est_real)/367) %>% ungroup() %>% group_by(Year, Month) %>% 
+  summarise(med = quantile(avg_est, prob = 0.5), lwr = quantile(avg_est, prob = 0.025), 
+            upr = quantile(avg_est, prob = 0.975))
+
+
+#plot
+SRKW_PS_H_comp<-ggplot() + 
+  geom_linerange(data = SRKW_PS_presence, aes(x = Year, ymin = lwr, ymax = upr), color = "gray20") + 
+  geom_point(data = SRKW_PS_presence, aes(x = Year, y = med, group = Month), color = "gray20") + 
+  geom_linerange(data = SRKW_PS_presence_noH, aes(x = Year, ymin = lwr, ymax = upr), alpha = 0.8, color = "red") + 
+  geom_point(data = SRKW_PS_presence_noH, aes(x = Year, y = med, group = Month), alpha = 0.8, color = "red") + 
+  facet_grid(Month~., labeller = as_labeller(mths_labs)) + 
+  scale_y_continuous(limits = c(0, 1), breaks = c(0, 0.5, 1.00), expand = c(0, 0.06)) +
+  theme_minimal() + 
+  theme(panel.grid = element_blank(),
+        axis.ticks = element_line(), 
+        legend.position = "none", 
+        strip.text = element_blank(), 
+        plot.tag.location = "panel") + 
+  labs(y = "Average probability of presence", tag = "a) SRKW Puget Sound")
+SRKW_PS_H_comp
+
+#plotting north of puget sound
+
+SRKW_SS_H_comp<-ggplot() + 
+  geom_linerange(data = SRKW_SS_presence, aes(x = Year, ymin = lwr, ymax = upr), color = "gray20") + 
+  geom_point(data = SRKW_SS_presence, aes(x = Year, y = med, group = Month), color = "gray20") + 
+  geom_linerange(data = SRKW_SS_presence_noH, aes(x = Year, ymin = lwr, ymax = upr),alpha = 0.8, color = "red") + 
+  geom_point(data = SRKW_SS_presence_noH, aes(x = Year, y = med, group = Month), alpha = 0.8, color = "red") + 
+  facet_grid(Month~., labeller = as_labeller(mths_labs)) + 
+  scale_y_continuous(limits = c(0, 1), breaks = c(0, 0.5, 1.00), expand = c(0, 0.06)) +
+  theme_minimal() + 
+  theme(panel.grid = element_blank(),
+        axis.ticks = element_line(), 
+        legend.position = "none", 
+        plot.tag.location = "panel") + 
+  labs(y = "Average probability of presence", tag = "b) SRKW Central Salish Sea") 
+
+SRKW_SS_H_comp
+
+T_SS_H_comp<-ggplot() + 
+  geom_linerange(data = T_SS_presence, aes(x = Year, ymin = lwr, ymax = upr), color = "gray20") + 
+  geom_point(data = T_SS_presence, aes(x = Year, y = med, group = Month), color = "gray20") + 
+  geom_linerange(data = T_SS_presence_noH, aes(x = Year, ymin = lwr, ymax = upr), alpha = 0.8, color = "red") + 
+  geom_point(data = T_SS_presence_noH, aes(x = Year, y = med, group = Month), alpha = 0.8, color = "red") + 
+  facet_grid(Month~., labeller = as_labeller(mths_labs)) + 
+  scale_y_continuous(limits = c(0, 1), breaks = c(0, 0.5, 1.00), expand = c(0, 0.06)) +
+  theme_minimal() + 
+  theme(panel.grid = element_blank(),
+        axis.ticks = element_line(), 
+        legend.position = "none", 
+        plot.tag.location = "panel") + 
+  labs(y = "Average probability of presence", tag = "b) Bigg's Central Salish Sea") 
+
+T_SS_H_comp
+
+T_PS_H_comp<-ggplot() + 
+  geom_linerange(data = T_PS_presence, aes(x = Year, ymin = lwr, ymax = upr), color = "gray20") + 
+  geom_point(data = T_PS_presence, aes(x = Year, y = med, group = Month), color = "gray20") + 
+  geom_linerange(data = T_PS_presence_noH, aes(x = Year, ymin = lwr, ymax = upr), alpha = 0.8, color = "red") + 
+  geom_point(data = T_PS_presence_noH, aes(x = Year, y = med, group = Month),alpha = 0.8, color = "red") + 
+  facet_grid(Month~., labeller = as_labeller(mths_labs)) + 
+  scale_y_continuous(limits = c(0, 1), breaks = c(0, 0.5, 1.00), expand = c(0, 0.06)) +
+  theme_minimal() + 
+  theme(panel.grid = element_blank(),
+        axis.ticks = element_line(), 
+        legend.position = "none", 
+        plot.tag.location = "panel") + 
+  labs(y = "Average probability of presence", tag = "b) Bigg's Puget Sound") 
+
+T_PS_H_comp
+
+#plot together
+month_noH<-SRKW_PS_H_comp + SRKW_SS_H_comp + T_PS_H_comp + T_SS_H_comp +  plot_layout(ncol = 4, guides = "collect", axes = "collect_y", axis_titles = "collect") & theme(plot.tag.position = c(0.5, 1.015), 
+                                                                                                                                                                         plot.tag = element_text(size = rel(0.9)))
+month_noH
+
+ggsave("Manuscript/figures/all_monthly_prob_noH.png", month_noH, dpi = 600, width = 8, height  = 8, units = "in")
 
 # Maps of spatial and spatio-temporal distributions for supplement --------
 
