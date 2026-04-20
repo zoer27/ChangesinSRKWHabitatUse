@@ -493,10 +493,11 @@ ggsave("Manuscript/figures/T_SRKW_comparison_grid.png", dpi = 600, width = 11, h
 
 
 # Comparison map in 2022 --------------------------------------------------
+world_coast<-ne_countries(scale = 10) 
 
 #Maps of 2022
-SRKW_full_preds_2022<-SRKW_full_preds %>% filter(Year == 2022) %>% select(-c(est_non_rf, est_rf, omega_s, epsilon_st)) %>% mutate(est = plogis(est))
-T_full_preds_2022<-T_full_preds %>% filter(Year == 2022)%>% select(-c(est_non_rf, est_rf, omega_s, epsilon_st)) %>% mutate(est = plogis(est))
+SRKW_full_preds_2022<-SRKW_quads_fullgrid %>% filter(Year == 2022) %>% select(-c(est_non_rf, est_rf, omega_s, epsilon_st)) %>% mutate(est = plogis(est))
+T_full_preds_2022<-T_quads_fullgrid %>% filter(Year == 2022)%>% select(-c(est_non_rf, est_rf, omega_s, epsilon_st)) %>% mutate(est = plogis(est))
 
 comp_2022<-SRKW_full_preds_2022 %>% left_join(T_full_preds_2022, by = c("X", "Y", "Year", "Month", "fyear")) 
 original_names <- "est"
@@ -525,7 +526,7 @@ names(mths_labs)<-as.character(mths)
 
 comp_map_2022<-ggplot(data=comp_2022_2) +
   geom_raster(aes(X, Y, fill = est_prob)) +
-  geom_sf(data = ps, fill = "gray", color = "gray60") +
+  geom_sf(data = world_coast, fill = "gray", color = "gray60") +
   scale_fill_gradient2(low = "blue",
                        mid = "white",
                        high = "red", 
